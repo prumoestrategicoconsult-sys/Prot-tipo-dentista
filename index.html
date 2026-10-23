@@ -1,0 +1,1633 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Prumo Lite — Dentistas</title>
+  
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/basecoat-css@1.0.2/dist/basecoat.cdn.min.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Inter:wght@400;500;600&display=swap">
+  <style>
+/* Skip artifact shell — fixed styles served beside every artifact.
+   Complements basecoat; artifacts override --accent for their own identity. */
+:root {
+  color-scheme: light dark;
+  --accent: #2563eb;
+  --accent-contrast: #ffffff;
+  --accent-text: color-mix(in srgb, var(--accent) 72%, #000);
+  --bg: #f8f9fb;
+  --surface: #ffffff;
+  --text: #14171f;
+  --text-muted: #5b6472;
+  --border: rgba(20, 23, 31, 0.10);
+  --radius: 10px;
+  --shadow: 0 1px 3px rgba(20, 23, 31, 0.08);
+  --space: 16px;
+}
+/* Theme resolution. Without data-theme the viewer's system preference decides,
+   as it always did. With it, the artifact's own choice wins in BOTH directions:
+   a page that hardcodes one palette must not be handed the opposite set of
+   tokens by the machine it happens to be opened on. The dark values appear
+   twice because a media query cannot be folded into a selector list.
+   The attribute sits inside :where() so these blocks keep the specificity of a
+   bare :root — the page's own <style> is linked after this file and must go on
+   overriding any token it wants, exactly as it could before. */
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    --accent-text: color-mix(in srgb, var(--accent) 78%, #fff);
+    --bg: #101318;
+    --surface: #181c23;
+    --text: #eef1f6;
+    --text-muted: #9aa4b2;
+    --border: rgba(238, 241, 246, 0.12);
+    --shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  }
+}
+:root:where([data-theme="dark"]) {
+  color-scheme: dark;
+  --accent-text: color-mix(in srgb, var(--accent) 78%, #fff);
+  --bg: #101318;
+  --surface: #181c23;
+  --text: #eef1f6;
+  --text-muted: #9aa4b2;
+  --border: rgba(238, 241, 246, 0.12);
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+:root:where([data-theme="light"]) { color-scheme: light; }
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+img { max-width: 100%; display: block; }
+
+.shell-container { max-width: 1100px; margin: 0 auto; padding: 0 20px; }
+.shell-section { padding: calc(var(--space) * 2) 0; }
+.shell-grid { display: grid; gap: var(--space); grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.shell-toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: var(--space); }
+.shell-footer { padding: 24px 0 40px; color: var(--text-muted); font-size: 13px; }
+
+.shell-hero { padding: calc(var(--space) * 3) 0 calc(var(--space) * 2); }
+.shell-hero h1 { font-size: clamp(26px, 4vw, 40px); line-height: 1.15; margin: 0 0 10px; text-wrap: balance; }
+.shell-hero p { color: var(--text-muted); max-width: 60ch; margin: 0; }
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: var(--space);
+}
+
+.kpi { display: flex; flex-direction: column; gap: 4px; }
+.kpi .kpi-value { font-size: 28px; font-weight: 650; line-height: 1.1; }
+.kpi .kpi-label { font-size: 13px; color: var(--text-muted); }
+.kpi .kpi-delta { font-size: 12.5px; font-weight: 600; }
+.kpi .kpi-delta.up { color: #0a8f3c; }
+.kpi .kpi-delta.down { color: #cf3131; }
+
+table.shell-table { border-collapse: collapse; width: 100%; font-size: 14px; }
+table.shell-table th {
+  text-align: left; font-size: 11.5px; letter-spacing: 0.05em; text-transform: uppercase;
+  color: var(--text-muted); font-weight: 600;
+}
+table.shell-table th, table.shell-table td { padding: 9px 12px 9px 0; border-bottom: 1px solid var(--border); }
+table.shell-table td.num, table.shell-table th.num { text-align: right; font-variant-numeric: tabular-nums; }
+table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 6%, transparent); }
+
+.chart-box { width: 100%; min-height: 220px; }
+.chart-box svg { width: 100%; height: auto; display: block; }
+
+.muted { color: var(--text-muted); }
+.accent { color: var(--accent-text); }
+.shell-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent); color: var(--accent-text);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .shell-fade { animation: shell-fade 400ms ease both; }
+  @keyframes shell-fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+}
+
+</style>
+
+  <style>
+    :root {
+      --navy-deep: #0E1B2E;
+      --navy-card: #15253D;
+      --navy-bubble: #192D48;
+      --navy-border: #233C5E;
+      --gold-light: #F5D06F;
+      --gold-main: #C9A227;
+      --gold-dark: #7A5C14;
+      --gold-border: rgba(201, 162, 39, 0.45);
+      --gold-border-solid: #C9A227;
+      --gold-glow: rgba(201, 162, 39, 0.18);
+      --text-pure: #FFFFFF;
+      --text-sub: #BACADF;
+      --text-muted: #8096B3;
+      --accent: #C9A227;
+      --accent-contrast: #0E1B2E;
+      --accent-text: #F5D06F;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--navy-deep);
+      color: var(--text-pure);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0;
+      overflow-x: hidden;
+    }
+
+    .font-serif {
+      font-family: 'Cinzel', serif;
+      letter-spacing: 0.08em;
+    }
+
+    .app-wrapper {
+      width: 100%;
+      max-width: 520px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background-color: var(--navy-deep);
+      position: relative;
+      border-left: 1px solid rgba(201, 162, 39, 0.15);
+      border-right: 1px solid rgba(201, 162, 39, 0.15);
+    }
+
+    /* TOPO E LOGO */
+    .header-branding {
+      padding: 20px 16px 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: linear-gradient(180deg, rgba(21, 37, 61, 0.6) 0%, rgba(14, 27, 46, 0.2) 100%);
+      border-bottom: 1px solid rgba(201, 162, 39, 0.2);
+    }
+
+    .logo-container {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .logo-svg {
+      width: 140px;
+      height: 94px;
+      filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.5));
+    }
+
+    .logo-title {
+      color: var(--gold-light);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      text-align: center;
+      margin-top: 2px;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+    }
+
+    /* BARRA SUPERIOR */
+    .top-toolbar {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 4px 2px;
+    }
+
+    .nav-back-btn {
+      background: none;
+      border: none;
+      color: var(--gold-light);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      padding: 6px 10px;
+      display: inline-flex;
+      align-items: center;
+      border-radius: 4px;
+      transition: background-color 0.2s, color 0.2s;
+    }
+
+    .nav-back-btn:hover {
+      background-color: var(--gold-glow);
+      color: #FFFFFF;
+    }
+
+    .status-badge {
+      font-size: 11px;
+      color: var(--text-sub);
+      background-color: rgba(25, 45, 72, 0.7);
+      border: 1px solid rgba(201, 162, 39, 0.28);
+      border-radius: 999px;
+      padding: 4px 12px;
+      font-weight: 500;
+    }
+
+    /* CARD INFORMATIVO */
+    .info-card {
+      margin: 12px 16px 8px;
+      background: rgba(21, 37, 61, 0.75);
+      border: 1px solid var(--gold-border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+    }
+
+    .info-card-header {
+      color: var(--gold-light);
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      margin-bottom: 4px;
+    }
+
+    .info-card-desc {
+      color: var(--text-pure);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    /* CABEÇALHO DO CHAT */
+    .chat-header {
+      padding: 12px 16px;
+      margin-top: 4px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--navy-card);
+      border-top: 1px solid rgba(201, 162, 39, 0.2);
+      border-bottom: 1px solid rgba(201, 162, 39, 0.25);
+    }
+
+    .chat-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #F5D06F 0%, #C9A227 60%, #7A5C14 100%);
+      color: #0E1B2E;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 18px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      flex-shrink: 0;
+    }
+
+    .chat-meta {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .chat-agent-name {
+      color: #FFFFFF;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .chat-agent-status {
+      color: var(--gold-light);
+      font-size: 11.5px;
+      margin-top: 2px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .status-dot-pulse {
+      display: inline-block;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background-color: #38C172;
+      box-shadow: 0 0 6px rgba(56, 193, 114, 0.8);
+    }
+
+    /* ÁREA DE PROGRESSO */
+    .chat-progress-wrap {
+      padding: 8px 16px 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .chat-progress-text {
+      color: var(--gold-light);
+      font-size: 11.5px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+    }
+
+    .progress-bar-rail {
+      width: 100px;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #C9A227, #F5D06F);
+      width: 14%;
+      transition: width 0.3s ease;
+    }
+
+    /* CORPO DA CONVERSA */
+    .chat-stream {
+      flex: 1;
+      padding: 12px 16px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      overflow-y: auto;
+      max-height: calc(100vh - 380px);
+      min-height: 320px;
+      scroll-behavior: smooth;
+    }
+
+    .msg-row {
+      display: flex;
+      flex-direction: column;
+      max-width: 86%;
+      animation: fadeInMsg 0.28s ease-out;
+    }
+
+    .msg-row.assistant {
+      align-self: flex-start;
+    }
+
+    .msg-row.user {
+      align-self: flex-end;
+    }
+
+    .msg-bubble {
+      padding: 12px 16px;
+      font-size: 13.5px;
+      line-height: 1.45;
+      border-radius: 14px;
+      word-break: break-word;
+    }
+
+    .msg-row.assistant .msg-bubble {
+      background-color: var(--navy-bubble);
+      color: #FFFFFF;
+      border: 1px solid rgba(159, 179, 202, 0.2);
+      border-bottom-left-radius: 4px;
+      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.22);
+    }
+
+    .msg-row.user .msg-bubble {
+      background: linear-gradient(135deg, rgba(201, 162, 39, 0.22) 0%, rgba(245, 208, 111, 0.15) 100%);
+      color: #FFFFFF;
+      border: 1px solid rgba(245, 208, 111, 0.45);
+      border-bottom-right-radius: 4px;
+      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.25);
+    }
+
+    .msg-time {
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-top: 4px;
+      padding: 0 4px;
+    }
+
+    .msg-row.user .msg-time {
+      align-self: flex-end;
+    }
+
+    /* DIGITANDO INDICATOR */
+    .typing-indicator {
+      display: none;
+      align-self: flex-start;
+      background-color: var(--navy-bubble);
+      padding: 10px 16px;
+      border-radius: 14px;
+      border-bottom-left-radius: 4px;
+      border: 1px solid rgba(159, 179, 202, 0.2);
+      margin-bottom: 6px;
+    }
+
+    .typing-dots {
+      display: flex;
+      gap: 5px;
+      align-items: center;
+    }
+
+    .typing-dots span {
+      width: 6px;
+      height: 6px;
+      background-color: var(--gold-light);
+      border-radius: 50%;
+      opacity: 0.4;
+      animation: pulseDot 1.4s infinite ease-in-out both;
+    }
+
+    .typing-dots span:nth-child(1) { animation-delay: -0.32s; }
+    .typing-dots span:nth-child(2) { animation-delay: -0.16s; }
+
+    @keyframes pulseDot {
+      0%, 80%, 100% { transform: scale(0.7); opacity: 0.3; }
+      40% { transform: scale(1.15); opacity: 1; }
+    }
+
+    @keyframes fadeInMsg {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* RESPOSTAS RÁPIDAS (PILLS - PROTAGONISTAS E DOURADAS) */
+    .quick-replies-tray {
+      padding: 10px 16px 8px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      background: var(--navy-deep);
+    }
+
+    .quick-pill {
+      background: linear-gradient(135deg, rgba(35, 60, 94, 0.85) 0%, rgba(21, 37, 61, 0.95) 100%);
+      color: var(--gold-light);
+      border: 1.5px solid var(--gold-main);
+      border-radius: 999px;
+      padding: 8px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-align: center;
+      line-height: 1.25;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28);
+    }
+
+    .quick-pill:hover, .quick-pill:focus-visible {
+      background: linear-gradient(135deg, #F5D06F 0%, #C9A227 100%);
+      color: #0E1B2E;
+      font-weight: 700;
+      border-color: #FFF2C2;
+      box-shadow: 0 0 12px rgba(245, 208, 111, 0.5);
+      outline: none;
+      transform: translateY(-1px);
+    }
+
+    .quick-pill.secondary-pill {
+      background: transparent;
+      color: var(--text-muted);
+      border-color: rgba(186, 202, 223, 0.3);
+      font-weight: 500;
+      font-size: 12px;
+    }
+
+    .quick-pill.secondary-pill:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: #FFFFFF;
+      border-color: var(--gold-light);
+      box-shadow: none;
+    }
+
+    /* ÁREA FIXA DE ENTRADA (SECUNDÁRIA / DISCRETA) */
+    .input-dock {
+      background: rgba(14, 27, 46, 0.95);
+      border-top: 1px solid rgba(186, 202, 223, 0.12);
+      padding: 6px 14px 8px;
+    }
+
+    .input-form {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .chat-input {
+      flex: 1;
+      background: rgba(21, 37, 61, 0.6);
+      border: 1px solid rgba(186, 202, 223, 0.2);
+      color: var(--text-sub);
+      padding: 6px 12px;
+      height: 32px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s, background-color 0.2s;
+    }
+
+    .chat-input::placeholder {
+      color: #6C829E;
+      font-size: 11.5px;
+    }
+
+    .chat-input:focus {
+      background: rgba(21, 37, 61, 0.95);
+      border-color: rgba(201, 162, 39, 0.6);
+      color: #FFFFFF;
+    }
+
+    .btn-send {
+      background: rgba(25, 45, 72, 0.8);
+      color: var(--gold-light);
+      border: 1px solid rgba(201, 162, 39, 0.4);
+      border-radius: 6px;
+      padding: 5px 12px;
+      height: 32px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: all 0.2s;
+    }
+
+    .btn-send:hover {
+      background: var(--gold-main);
+      color: #0E1B2E;
+      border-color: var(--gold-light);
+    }
+
+    .btn-send:hover {
+      opacity: 0.94;
+    }
+
+    .btn-send:active {
+      transform: scale(0.97);
+    }
+
+    .btn-send:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* TELA FINAL DE CONSULTA ORGANIZADA */
+    .summary-card {
+      margin: 12px 16px 20px;
+      background: var(--navy-card);
+      border: 1px solid var(--gold-border-solid);
+      border-radius: 10px;
+      padding: 18px 16px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+      animation: fadeInMsg 0.4s ease-out;
+      display: none;
+    }
+
+    .summary-title {
+      color: var(--gold-light);
+      font-size: 15px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      text-align: center;
+      margin-bottom: 14px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(201, 162, 39, 0.25);
+    }
+
+    .summary-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      font-size: 13px;
+      padding-bottom: 6px;
+      border-bottom: 1px dashed rgba(186, 202, 223, 0.12);
+    }
+
+    .summary-label {
+      color: var(--gold-light);
+      font-weight: 600;
+      font-size: 12px;
+      letter-spacing: 0.03em;
+      width: 42%;
+      flex-shrink: 0;
+    }
+
+    .summary-value {
+      color: #FFFFFF;
+      text-align: right;
+      font-weight: 500;
+      width: 58%;
+      word-break: break-word;
+    }
+
+    .btn-whatsapp-action {
+      display: block;
+      width: 100%;
+      background: linear-gradient(135deg, #F5D06F 0%, #C9A227 60%, #B88E16 100%);
+      color: #0E1B2E;
+      text-align: center;
+      text-decoration: none;
+      padding: 13px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      border: 1px solid #FFE699;
+      box-shadow: 0 4px 14px rgba(201, 162, 39, 0.35);
+      transition: filter 0.2s, transform 0.1s;
+      cursor: pointer;
+    }
+
+    .btn-whatsapp-action:hover {
+      filter: brightness(1.08);
+    }
+
+    .btn-whatsapp-action:active {
+      transform: scale(0.98);
+    }
+
+    .summary-note {
+      color: var(--text-muted);
+      font-size: 11.5px;
+      text-align: center;
+      margin-top: 10px;
+      line-height: 1.4;
+    }
+
+    /* BLOCO DE AVALIAÇÃO DISCRETO */
+    .rating-block {
+      margin-top: 18px;
+      padding-top: 14px;
+      border-top: 1px solid rgba(201, 162, 39, 0.2);
+      text-align: center;
+    }
+
+    .rating-title {
+      font-size: 12px;
+      color: var(--text-sub);
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+
+    .rating-stars {
+      display: inline-flex;
+      gap: 6px;
+      justify-content: center;
+      margin-bottom: 6px;
+    }
+
+    .star-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 20px;
+      line-height: 1;
+      color: rgba(186, 202, 223, 0.3);
+      transition: color 0.15s, transform 0.15s;
+      padding: 2px;
+    }
+
+    .star-btn:hover,
+    .star-btn.hovered,
+    .star-btn.active {
+      color: var(--gold-light);
+      transform: scale(1.15);
+      text-shadow: 0 0 8px rgba(245, 208, 111, 0.6);
+    }
+
+    .rating-thanks {
+      display: none;
+      font-size: 11.5px;
+      color: var(--gold-light);
+      margin-top: 4px;
+      animation: fadeInMsg 0.3s ease;
+    }
+
+    .btn-restart {
+      display: block;
+      width: 100%;
+      background: transparent;
+      color: var(--gold-light);
+      border: 1px solid rgba(201, 162, 39, 0.35);
+      border-radius: 6px;
+      padding: 9px 12px;
+      font-size: 12.5px;
+      font-weight: 600;
+      margin-top: 12px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn-restart:hover {
+      background: var(--gold-glow);
+    }
+
+    /* RODAPÉ */
+    .app-footer {
+      padding: 14px 16px;
+      text-align: center;
+      font-size: 11px;
+      color: var(--text-muted);
+      border-top: 1px solid rgba(201, 162, 39, 0.15);
+      background-color: var(--navy-deep);
+    }
+
+    .app-footer a {
+      color: var(--gold-light);
+      text-decoration: none;
+    }
+
+    .app-footer a:hover {
+      text-decoration: underline;
+    }
+
+    /* UTILITÁRIOS */
+    .hidden {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app-wrapper">
+
+    <!-- 1. LOGO OFICIAL NO TOPO -->
+    <header class="header-branding">
+      <div class="logo-container">
+        <svg viewBox="0 0 200 250" width="110" height="137" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Logo Prumo Estratégico">
+          <defs>
+            <linearGradient id="goldL" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0" stop-color="#F5D06F"/><stop offset="0.55" stop-color="#C9A227"/><stop offset="1" stop-color="#8A6A1B"/>
+            </linearGradient>
+            <linearGradient id="goldR" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0" stop-color="#8A6A1B"/><stop offset="0.45" stop-color="#C9A227"/><stop offset="1" stop-color="#F5D06F"/>
+            </linearGradient>
+            <linearGradient id="goldRing" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#F5D06F"/><stop offset="1" stop-color="#8A6A1B"/>
+            </linearGradient>
+          </defs>
+          <g stroke="url(#goldRing)" stroke-width="4" fill="none" stroke-linecap="round">
+            <path d="M 116.2 48.7 A 78 78 0 0 1 176.3 108.8"/>
+            <path d="M 176.3 141.2 A 78 78 0 0 1 116.2 201.3"/>
+            <path d="M 83.8 201.3 A 78 78 0 0 1 23.7 141.2"/>
+            <path d="M 23.7 108.8 A 78 78 0 0 1 83.8 48.7"/>
+          </g>
+          <g stroke="url(#goldRing)" stroke-width="2.5" fill="none" stroke-linecap="round">
+            <path d="M 111.1 62 A 64 64 0 0 1 163 113.9"/>
+            <path d="M 163 136.1 A 64 64 0 0 1 111.1 188"/>
+            <path d="M 88.9 188 A 64 64 0 0 1 37 136.1"/>
+            <path d="M 37 113.9 A 64 64 0 0 1 88.9 62"/>
+          </g>
+          <g stroke="#C9A227" stroke-width="4" stroke-linecap="round">
+            <line x1="4" y1="125" x2="18" y2="125"/>
+            <line x1="182" y1="125" x2="196" y2="125"/>
+          </g>
+          <polygon points="100,62 78,96 100,96" fill="url(#goldL)"/>
+          <polygon points="100,62 122,96 100,96" fill="url(#goldR)"/>
+          <rect x="74" y="96" width="52" height="14" fill="#B8912A"/>
+          <g stroke="#7A5C14" stroke-width="1.5">
+            <line x1="76" y1="100" x2="124" y2="100"/>
+            <line x1="76" y1="104" x2="124" y2="104"/>
+            <line x1="76" y1="108" x2="124" y2="108"/>
+          </g>
+          <polygon points="78,110 100,110 100,192" fill="url(#goldL)"/>
+          <polygon points="122,110 100,110 100,192" fill="url(#goldR)"/>
+          <line x1="100" y1="62" x2="100" y2="192" stroke="#7A5C14" stroke-width="1.2"/>
+          <circle cx="100" cy="152" r="8" fill="#0E1B2E" stroke="#7A5C14" stroke-width="2"/>
+        </svg>
+
+        <h1 class="logo-title font-serif">PRUMO ESTRATÉGICO</h1>
+      </div>
+
+      <!-- 2. BARRA SUPERIOR -->
+      <div class="top-toolbar">
+        <button type="button" class="nav-back-btn" id="btnTopHome" title="Voltar ao início">
+          &larr; Início
+        </button>
+        <div class="status-badge">
+          &bull; Protótipo demonstrativo &middot; IA simulada
+        </div>
+      </div>
+    </header>
+
+    <!-- 3. CARD INFORMATIVO -->
+    <section class="info-card" aria-label="Informações sobre o protótipo">
+      <div class="info-card-header font-serif">O QUE VOCÊ ESTÁ VENDO</div>
+      <p class="info-card-desc">
+        Paciente respondendo: as respostas viram uma consulta organizada.
+      </p>
+    </section>
+
+    <!-- 4. CABEÇALHO DO CHAT -->
+    <section class="chat-header">
+      <div class="chat-avatar font-serif" aria-hidden="true">P</div>
+      <div class="chat-meta">
+        <div class="chat-agent-name">Assistente Prumo IA</div>
+        <div class="chat-agent-status">
+          <span class="status-dot-pulse"></span>
+          <span>Online &middot; Simulando interação com o paciente</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- INDICADOR DE PROGRESSO -->
+    <div class="chat-progress-wrap" id="chatProgressWrap">
+      <span class="chat-progress-text" id="progressLabel">Pergunta 1 de 8</span>
+      <div class="progress-bar-rail" aria-hidden="true">
+        <div class="progress-bar-fill" id="progressBar" style="width: 12%;"></div>
+      </div>
+    </div>
+
+    <!-- 5. ÁREA DE CONVERSA (O CORAÇÃO DA PÁGINA) -->
+    <main class="chat-stream" id="chatStream" aria-live="polite">
+      <!-- MENSAGEM INICIAL DO ASSISTENTE -->
+      <div class="msg-row assistant">
+        <div class="msg-bubble">
+          Olá! Seja muito bem-vindo ao nosso atendimento odontológico. Para começarmos, qual é o procedimento que você tem interesse?
+        </div>
+        <span class="msg-time" id="welcomeTime">Agora</span>
+      </div>
+
+      <!-- INDICADOR DIGITANDO -->
+      <div class="typing-indicator" id="typingIndicator">
+        <div class="typing-dots">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+      </div>
+    </main>
+
+    <!-- BANDEJA DE RESPOSTAS RÁPIDAS (PILLS) -->
+    <div class="quick-replies-tray" id="quickTray" aria-label="Opções de resposta rápida">
+      <!-- As pills do passo atual são injetadas via JavaScript -->
+    </div>
+
+    <!-- CAMPO DE DIGITAÇÃO FIXO NA PARTE INFERIOR (SECUNDÁRIO) -->
+    <div class="input-dock" id="inputDock">
+      <form class="input-form" id="chatForm">
+        <input 
+          type="text" 
+          id="chatInput" 
+          class="chat-input" 
+          placeholder="Se preferir, escreva sua resposta..." 
+          autocomplete="off"
+          aria-label="Se preferir, escreva sua resposta..."
+        />
+        <button type="submit" id="btnSend" class="btn-send">
+          Enviar
+        </button>
+      </form>
+    </div>
+
+    <!-- 6. TELA FINAL (APÓS A ÚLTIMA RESPOSTA) -->
+    <section class="summary-card" id="summaryCard" aria-label="Resumo da consulta">
+      <h2 class="summary-title font-serif">Quase lá — sua consulta está sendo encaminhada</h2>
+      
+      <div class="summary-grid">
+        <div class="summary-row">
+          <span class="summary-label">Paciente:</span>
+          <span class="summary-value" id="sumNome"></span>
+        </div>
+        <div class="summary-row">
+          <span class="summary-label">Interesse:</span>
+          <span class="summary-value" id="sumProcedimento"></span>
+        </div>
+        <div class="summary-row">
+          <span class="summary-label">Histórico:</span>
+          <span class="summary-value" id="sumHistorico"></span>
+        </div>
+        <div class="summary-row">
+          <span class="summary-label">Tempo de interesse:</span>
+          <span class="summary-value" id="sumTempo"></span>
+        </div>
+        <div class="summary-row">
+          <span class="summary-label">Preferência:</span>
+          <span class="summary-value" id="sumPreferencia"></span>
+        </div>
+        <div class="summary-row">
+          <span class="summary-label">Região:</span>
+          <span class="summary-value" id="sumRegiao"></span>
+        </div>
+        <div class="summary-row">
+          <span class="summary-label">WhatsApp:</span>
+          <span class="summary-value" id="sumWhatsapp"></span>
+        </div>
+        <div class="summary-row" id="sumObservacoesRow" style="display: none;">
+          <span class="summary-label">Observações:</span>
+          <span class="summary-value" id="sumObservacoes"></span>
+        </div>
+      </div>
+
+      <a id="btnWhatsApp" href="#" target="_blank" rel="noopener noreferrer" class="btn-whatsapp-action">
+        CONFIRMAR MINHA CONSULTA
+      </a>
+
+      <p class="summary-note">
+        No produto real, este resumo chega direto no WhatsApp do seu dentista, que confirma seu horário.
+      </p>
+
+      <!-- BLOCO DE AVALIAÇÃO DISCRETO -->
+      <div class="rating-block" id="ratingBlock">
+        <div class="rating-title">Como foi sua experiência com este atendimento?</div>
+        <div class="rating-stars" id="ratingStars" role="radiogroup" aria-label="Avalie de 1 a 5 estrelas">
+          <button type="button" class="star-btn" data-star="1" aria-label="1 estrela">&#9733;</button>
+          <button type="button" class="star-btn" data-star="2" aria-label="2 estrelas">&#9733;</button>
+          <button type="button" class="star-btn" data-star="3" aria-label="3 estrelas">&#9733;</button>
+          <button type="button" class="star-btn" data-star="4" aria-label="4 estrelas">&#9733;</button>
+          <button type="button" class="star-btn" data-star="5" aria-label="5 estrelas">&#9733;</button>
+        </div>
+        <div class="rating-thanks" id="ratingThanks">
+          Obrigado! Sua avaliação ajuda o consultório a melhorar.
+        </div>
+      </div>
+
+      <button type="button" class="btn-restart" id="btnRestart">
+        Recomeçar
+      </button>
+    </section>
+
+    <!-- 7. RODAPÉ FIXO -->
+    <footer class="app-footer">
+      Protótipo de demonstração &middot; Prumo Estratégico &middot; <a href="tel:12991945078">(12) 99194-5078</a>
+    </footer>
+
+  </div>
+
+  
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // Estado da conversa consultiva e dados coletados
+      const state = {
+        currentStage: 'procedimento',
+        stepNumber: 1,
+        totalSteps: 8,
+        data: {
+          procedimento: '',
+          historico: '',
+          tempo: '',
+          preferencia: '',
+          regiao: '',
+          nome: '',
+          whatsapp: '',
+          observacoes: ''
+        }
+      };
+
+      // Respostas de valorização do procedimento
+      // Para os procedimentos complexos (Canal, Implante, Ortodontia), destaca que a avaliação/plano de tratamento vem primeiro
+      const procedureValuations = {
+        'Consulta avaliativa': {
+          text: 'Excelente escolha! A consulta avaliativa é o ponto de partida onde tudo é examinado com calma e segurança para o seu sorriso.'
+        },
+        'Limpeza e prevenção': {
+          text: 'Ótimo! A limpeza regular mantém a saúde gengival e evita procedimentos maiores no futuro, com direito à avaliação preventiva.'
+        },
+        'Clareamento': {
+          text: 'Ótima escolha! O clareamento transforma o sorriso com segurança quando planejado após uma avaliação individualizada.'
+        },
+        'Tratamento de canal': {
+          text: 'Fico feliz que esteja buscando resolver isso. Para tratamento de canal, a avaliação clínica e radiográfica vem sempre primeiro para agir na causa com total conforto.'
+        },
+        'Implante': {
+          text: 'Excelente decisão! No implante dentário, a avaliação detalhada e o plano de tratamento individualizado vêm em primeiro lugar para garantir segurança e longevidade.'
+        },
+        'Ortodontia e alinhadores': {
+          text: 'Ótima escolha! Na ortodontia e alinhadores invisíveis, o planejamento e a avaliação diagnóstica vêm sempre primeiro para definir o alinhamento ideal.'
+        },
+        'Estética facial': {
+          text: 'Excelente! A estética facial valoriza seus traços com naturalidade, iniciando sempre por uma avaliação de proporções e segurança.'
+        }
+      };
+
+      // Respostas consultivas para a pergunta de histórico
+      const historicoResponses = {
+        'Já sou paciente': 'Que bom te ver de novo! Sendo paciente, o dentista já conhece seu histórico e a avaliação fica ainda mais rápida de agendar.',
+        'Já fiz avaliação com outro dentista': 'Sem problemas! Com uma avaliação recente em mãos, o dentista consegue dar continuidade ao planejamento sem repetir etapas.',
+        'Primeira vez': 'Ótimo! A primeira consulta avaliativa é justamente onde tudo começa: o dentista avalia, tira suas dúvidas e monta o plano de tratamento. Para procedimentos como canal, implante e aparelho, essa avaliação é o primeiro passo obrigatório — e a gente organiza isso para você.'
+      };
+
+      // Respostas de escassez suave para a pergunta de urgência/tempo
+      const urgencyResponses = {
+        'Agora': 'Perfeito! Pacientes com essa prontidão costumam conseguir horário ainda nesta semana. Vou organizar tudo para o dentista confirmar o quanto antes.',
+        'Alguns meses': 'Ótimo, é o momento de se planejar. E saiba que a avaliação agora já garante seu lugar na agenda quando você decidir.'
+      };
+
+      // Pills iniciais do procedimento
+      const initialPills = [
+        'Consulta avaliativa',
+        'Limpeza e prevenção',
+        'Clareamento',
+        'Tratamento de canal',
+        'Implante',
+        'Ortodontia e alinhadores',
+        'Estética facial'
+      ];
+
+      // Elementos do DOM
+      const chatStream = document.getElementById('chatStream');
+      const quickTray = document.getElementById('quickTray');
+      const chatForm = document.getElementById('chatForm');
+      const chatInput = document.getElementById('chatInput');
+      const btnSend = document.getElementById('btnSend');
+      const typingIndicator = document.getElementById('typingIndicator');
+      const inputDock = document.getElementById('inputDock');
+      const progressLabel = document.getElementById('progressLabel');
+      const progressBar = document.getElementById('progressBar');
+      const summaryCard = document.getElementById('summaryCard');
+      const btnWhatsApp = document.getElementById('btnWhatsApp');
+      const btnRestart = document.getElementById('btnRestart');
+      const btnTopHome = document.getElementById('btnTopHome');
+
+      const welcomeTime = document.getElementById('welcomeTime');
+      if (welcomeTime) {
+        welcomeTime.textContent = getNowTime();
+      }
+
+      function getNowTime() {
+        const d = new Date();
+        const h = String(d.getHours()).padStart(2, '0');
+        const m = String(d.getMinutes()).padStart(2, '0');
+        return h + ':' + m;
+      }
+
+      function getFirstName(fullName) {
+        if (!fullName) return '';
+        const trimmed = fullName.trim();
+        const parts = trimmed.split(/\s+/);
+        if (parts.length === 0 || !parts[0]) return '';
+        const name = parts[0];
+        return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+      }
+
+      function renderPills(pillsList) {
+        quickTray.innerHTML = '';
+        if (!pillsList || pillsList.length === 0) {
+          quickTray.classList.add('hidden');
+          return;
+        }
+
+        quickTray.classList.remove('hidden');
+        pillsList.forEach(item => {
+          const isObj = typeof item === 'object';
+          const pillText = isObj ? item.text : item;
+          const isSecondary = isObj && item.secondary;
+
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'quick-pill' + (isSecondary ? ' secondary-pill' : '');
+          btn.textContent = pillText;
+          btn.addEventListener('click', () => {
+            handleUserResponse(pillText);
+          });
+          quickTray.appendChild(btn);
+        });
+      }
+
+      function updateProgress(step) {
+        state.stepNumber = step;
+        if (step <= state.totalSteps) {
+          progressLabel.textContent = 'Pergunta ' + step + ' de ' + state.totalSteps;
+          const pct = Math.round((step / state.totalSteps) * 100);
+          progressBar.style.width = pct + '%';
+        } else {
+          progressLabel.textContent = 'Consulta encaminhada';
+          progressBar.style.width = '100%';
+        }
+      }
+
+      function addMessageBubble(text, sender) {
+        const row = document.createElement('div');
+        row.className = 'msg-row ' + sender;
+
+        const bubble = document.createElement('div');
+        bubble.className = 'msg-bubble';
+        bubble.textContent = text;
+
+        const time = document.createElement('span');
+        time.className = 'msg-time';
+        time.textContent = getNowTime();
+
+        row.appendChild(bubble);
+        row.appendChild(time);
+
+        chatStream.insertBefore(row, typingIndicator);
+        scrollChatToBottom();
+      }
+
+      function scrollChatToBottom() {
+        requestAnimationFrame(() => {
+          chatStream.scrollTop = chatStream.scrollHeight;
+        });
+      }
+
+      function showTyping(show) {
+        if (show) {
+          typingIndicator.style.display = 'inline-block';
+          chatStream.appendChild(typingIndicator);
+          scrollChatToBottom();
+        } else {
+          typingIndicator.style.display = 'none';
+        }
+      }
+
+      // Condução consultiva: valida resposta anterior + cria desejo + orienta ao agendamento
+      function handleUserResponse(answerText) {
+        const text = answerText.trim();
+        if (!text) return;
+
+        addMessageBubble(text, 'user');
+        chatInput.value = '';
+
+        chatInput.disabled = true;
+        btnSend.disabled = true;
+        quickTray.innerHTML = '';
+        quickTray.classList.add('hidden');
+
+        showTyping(true);
+
+        setTimeout(() => {
+          showTyping(false);
+          processNextConsultativeStep(text);
+          chatInput.disabled = false;
+          btnSend.disabled = false;
+          chatInput.focus();
+        }, 650);
+      }
+
+      function processNextConsultativeStep(userText) {
+        switch (state.currentStage) {
+          case 'procedimento': {
+            state.data.procedimento = userText;
+            const valuation = procedureValuations[userText]?.text || 
+              'Excelente escolha! Cuidar do sorriso traz mais segurança e bem-estar para o seu dia a dia.';
+
+            addMessageBubble(valuation, 'assistant');
+
+            // 3. NOVA PERGUNTA: inserida após o procedimento, antes de "há quanto tempo"
+            updateProgress(2);
+            setTimeout(() => {
+              const askHistorico = 'Você já é paciente do consultório ou já passou com algum dentista sobre isso?';
+              addMessageBubble(askHistorico, 'assistant');
+              state.currentStage = 'historico';
+              renderPills([
+                'Já sou paciente',
+                'Já fiz avaliação com outro dentista',
+                'Primeira vez'
+              ]);
+              chatInput.placeholder = 'Se preferir, escreva sua resposta...';
+            }, 350);
+            break;
+          }
+
+          case 'historico': {
+            state.data.historico = userText;
+            const respText = historicoResponses[userText] || 
+              'Entendido! Vamos deixar esse histórico registrado para que o dentista planeje seu atendimento da melhor forma.';
+
+            addMessageBubble(respText, 'assistant');
+
+            // Segue para a pergunta de urgência/tempo
+            updateProgress(3);
+            setTimeout(() => {
+              const askTempo = 'E há quanto tempo você vinha pensando em fazer ou agendar esse cuidado?';
+              addMessageBubble(askTempo, 'assistant');
+              state.currentStage = 'tempo';
+              renderPills(['Agora', 'Alguns meses']);
+              chatInput.placeholder = 'Se preferir, escreva sua resposta...';
+            }, 350);
+            break;
+          }
+
+          case 'tempo': {
+            state.data.tempo = userText;
+            let scarcityMsg;
+            const lower = userText.toLowerCase();
+            if (lower.includes('pesquis')) {
+              scarcityMsg = 'Sem problema! A avaliação é justamente o espaço para tirar todas as suas dúvidas, sem compromisso. Assim você decide com segurança.';
+            } else {
+              scarcityMsg = urgencyResponses[userText] || 
+                'Perfeito! Vamos organizar as melhores opções de agenda para você aproveitar essa consulta.';
+            }
+
+            addMessageBubble(scarcityMsg, 'assistant');
+
+            updateProgress(4);
+            setTimeout(() => {
+              const askPeriodo = 'Prefere atendimento de manhã, à tarde ou à noite?';
+              addMessageBubble(askPeriodo, 'assistant');
+              state.currentStage = 'preferencia';
+              renderPills(['Manhã', 'Tarde', 'Noite']);
+              chatInput.placeholder = 'Se preferir, escreva sua resposta...';
+            }, 320);
+            break;
+          }
+
+          case 'preferencia': {
+            state.data.preferencia = userText;
+            const respPeriodo = 'Anotado! Vou deixar essa preferência registrada para o dentista confirmar o horário que ficar melhor para você.';
+            addMessageBubble(respPeriodo, 'assistant');
+
+            updateProgress(5);
+            setTimeout(() => {
+              const askBairro = 'Qual bairro ou região fica melhor para você?';
+              addMessageBubble(askBairro, 'assistant');
+              state.currentStage = 'regiao';
+              renderPills(['Centro', 'Zona Sul', 'Zona Oeste', 'Outro bairro']);
+              chatInput.placeholder = 'Se preferir, escreva sua resposta...';
+            }, 320);
+            break;
+          }
+
+          case 'regiao': {
+            state.data.regiao = userText;
+            const respBairro = 'Perfeito, região de fácil acesso. O consultório vai te confirmar o endereço exato na confirmação.';
+            addMessageBubble(respBairro, 'assistant');
+
+            updateProgress(6);
+            setTimeout(() => {
+              const askNome = 'Para organizarmos o atendimento com o dentista, qual é o seu nome completo?';
+              addMessageBubble(askNome, 'assistant');
+              state.currentStage = 'nome';
+              renderPills([]);
+              chatInput.placeholder = 'Se preferir, escreva sua resposta...';
+            }, 320);
+            break;
+          }
+
+          case 'nome': {
+            state.data.nome = userText;
+            const firstName = getFirstName(userText) || userText;
+            const respNome = 'Prazer, ' + firstName + '! Já estou organizando sua solicitação.';
+            addMessageBubble(respNome, 'assistant');
+
+            updateProgress(7);
+            setTimeout(() => {
+              const askWhats = 'E qual é o seu melhor WhatsApp para o dentista confirmar o horário com você?';
+              addMessageBubble(askWhats, 'assistant');
+              state.currentStage = 'whatsapp';
+              renderPills([]);
+              chatInput.placeholder = 'Ex: (12) 99123-4567';
+            }, 320);
+            break;
+          }
+
+          case 'whatsapp': {
+            state.data.whatsapp = userText;
+
+            // 4. NOVA PERGUNTA FINAL OPCIONAL (após WhatsApp, antes da tela final)
+            updateProgress(8);
+            setTimeout(() => {
+              const askObs = 'Tem mais alguma informação que você gostaria de adicionar? (opcional)';
+              addMessageBubble(askObs, 'assistant');
+              state.currentStage = 'observacoes';
+              renderPills([
+                { text: 'Não tenho nada a adicionar', secondary: true }
+              ]);
+              chatInput.placeholder = 'Se preferir, escreva sua resposta...';
+            }, 350);
+            break;
+          }
+
+          case 'observacoes': {
+            const isSkip = (userText.toLowerCase().includes('não tenho') || userText.toLowerCase().includes('nada a adicionar'));
+            if (!isSkip && userText.trim().length > 0) {
+              state.data.observacoes = userText.trim();
+            } else {
+              state.data.observacoes = '';
+            }
+
+            const firstName = getFirstName(state.data.nome) || 'paciente';
+            const closingMsg = 'Tudo pronto, ' + firstName + '! Sua solicitação está organizada. O dentista vai te chamar nesse número para CONFIRMAR o melhor horário da sua consulta avaliativa. É só tocar no botão abaixo.';
+            addMessageBubble(closingMsg, 'assistant');
+
+            updateProgress(9);
+            setTimeout(() => {
+              showSummaryCard();
+            }, 550);
+            break;
+          }
+        }
+      }
+
+      function showSummaryCard() {
+        document.getElementById('sumNome').textContent = state.data.nome || 'Não informado';
+        document.getElementById('sumProcedimento').textContent = state.data.procedimento || 'Não informado';
+        document.getElementById('sumHistorico').textContent = state.data.historico || 'Primeira vez';
+        document.getElementById('sumTempo').textContent = state.data.tempo || 'Prontidão imediata';
+        document.getElementById('sumPreferencia').textContent = state.data.preferencia || 'A combinar';
+        document.getElementById('sumRegiao').textContent = state.data.regiao || 'Não informado';
+        document.getElementById('sumWhatsapp').textContent = state.data.whatsapp || 'Não informado';
+
+        const obsRow = document.getElementById('sumObservacoesRow');
+        const obsVal = document.getElementById('sumObservacoes');
+        if (state.data.observacoes && state.data.observacoes.trim()) {
+          obsVal.textContent = state.data.observacoes;
+          obsRow.style.display = 'flex';
+        } else {
+          obsRow.style.display = 'none';
+        }
+
+        inputDock.style.display = 'none';
+        quickTray.style.display = 'none';
+        summaryCard.style.display = 'block';
+
+        const msgLines = [
+          '*CONFIRMAÇÃO DE CONSULTA AVALIATIVA*',
+          'Atendimento via Prumo Lite — Venda Consultiva',
+          '',
+          '*Paciente:* ' + (state.data.nome || 'Não informado'),
+          '*Procedimento de interesse:* ' + (state.data.procedimento || 'Consulta avaliativa'),
+          '*Histórico / Paciente:* ' + (state.data.historico || 'Primeira vez'),
+          '*Tempo de interesse:* ' + (state.data.tempo || 'Prontidão imediata'),
+          '*Preferência de horário:* ' + (state.data.preferencia || 'A combinar'),
+          '*Região / Bairro:* ' + (state.data.regiao || 'Não informado'),
+          '*WhatsApp do paciente:* ' + (state.data.whatsapp || 'Não informado')
+        ];
+
+        if (state.data.observacoes && state.data.observacoes.trim()) {
+          msgLines.push('*Observações:* ' + state.data.observacoes.trim());
+        }
+
+        msgLines.push('');
+        msgLines.push('Olá! Gostaria de confirmar o melhor horário para a minha consulta avaliativa.');
+
+        const rawMessage = msgLines.join('\n');
+        btnWhatsApp.href = 'https://wa.me/5512991945078?text=' + encodeURIComponent(rawMessage);
+
+        // Reset da avaliação por estrelas ao exibir
+        resetRating();
+
+        summaryCard.scrollIntoView({ behavior: 'smooth' });
+      }
+
+      // Sistema de avaliação de 5 estrelas na tela final
+      const starButtons = document.querySelectorAll('.star-btn');
+      const ratingThanks = document.getElementById('ratingThanks');
+      let currentRating = 0;
+
+      starButtons.forEach(btn => {
+        btn.addEventListener('mouseenter', () => {
+          const val = parseInt(btn.dataset.star, 10);
+          highlightStars(val);
+        });
+
+        btn.addEventListener('mouseleave', () => {
+          highlightStars(currentRating);
+        });
+
+        btn.addEventListener('click', () => {
+          currentRating = parseInt(btn.dataset.star, 10);
+          highlightStars(currentRating);
+          ratingThanks.style.display = 'block';
+        });
+      });
+
+      function highlightStars(count) {
+        starButtons.forEach(btn => {
+          const val = parseInt(btn.dataset.star, 10);
+          if (val <= count) {
+            btn.classList.add('active');
+          } else {
+            btn.classList.remove('active');
+          }
+        });
+      }
+
+      function resetRating() {
+        currentRating = 0;
+        highlightStars(0);
+        if (ratingThanks) ratingThanks.style.display = 'none';
+      }
+
+      chatForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const value = chatInput.value.trim();
+        if (value) {
+          handleUserResponse(value);
+        }
+      });
+
+      // Máscara simplificada de WhatsApp no estágio final
+      chatInput.addEventListener('input', (e) => {
+        if (state.currentStage === 'whatsapp') {
+          let val = e.target.value.replace(/\D/g, '');
+          if (val.length > 11) val = val.substring(0, 11);
+          if (val.length > 6) {
+            e.target.value = '(' + val.substring(0,2) + ') ' + val.substring(2,7) + '-' + val.substring(7);
+          } else if (val.length > 2) {
+            e.target.value = '(' + val.substring(0,2) + ') ' + val.substring(2);
+          } else if (val.length > 0) {
+            e.target.value = '(' + val;
+          }
+        }
+      });
+
+      function resetChat() {
+        state.currentStage = 'procedimento';
+        state.stepNumber = 1;
+        state.data = {
+          procedimento: '',
+          historico: '',
+          tempo: '',
+          preferencia: '',
+          regiao: '',
+          nome: '',
+          whatsapp: '',
+          observacoes: ''
+        };
+
+        const bubbles = chatStream.querySelectorAll('.msg-row');
+        bubbles.forEach((el, index) => {
+          if (index > 0) el.remove();
+        });
+
+        summaryCard.style.display = 'none';
+        inputDock.style.display = 'block';
+        quickTray.style.display = 'flex';
+        chatInput.disabled = false;
+        btnSend.disabled = false;
+        chatInput.value = '';
+        chatInput.placeholder = 'Se preferir, escreva sua resposta...';
+
+        resetRating();
+        updateProgress(1);
+        renderPills(initialPills);
+        scrollChatToBottom();
+      }
+
+      btnRestart.addEventListener('click', resetChat);
+      btnTopHome.addEventListener('click', resetChat);
+
+      // Inicia com as pills do cardápio inicial
+      renderPills(initialPills);
+      updateProgress(1);
+    });
+  </script>
+<script>
+/* Skip artifact shell — fixed helpers served beside every artifact. */
+(function () {
+  "use strict";
+
+  var fmt = {
+    num: function (v, opts) { return new Intl.NumberFormat("pt-BR", opts || {}).format(v); },
+    brl: function (v) { return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v); },
+    pct: function (v) { return new Intl.NumberFormat("pt-BR", { style: "percent", maximumFractionDigits: 1 }).format(v); }
+  };
+
+  // axisFmt keeps axis tick labels short (compact notation) so long values
+  // (e.g. full BRL amounts) never clip against the plot edge.
+  function axisFmt(v) {
+    return fmt.num(v, { notation: "compact", maximumFractionDigits: 1 });
+  }
+
+  // format accepts a function OR one of the fmt names ("num" | "brl" | "pct").
+  function coerceFormat(spec) {
+    if (typeof spec === "function") return spec;
+    if (typeof spec === "string" && fmt[spec]) return fmt[spec];
+    return function (v) { return fmt.num(v); };
+  }
+
+  function accent() {
+    return getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#2563eb";
+  }
+  function mutedColor() {
+    return getComputedStyle(document.documentElement).getPropertyValue("--text-muted").trim() || "#5b6472";
+  }
+  function svgEl(tag, attrs) {
+    var el = document.createElementNS("http://www.w3.org/2000/svg", tag);
+    for (var k in attrs) el.setAttribute(k, attrs[k]);
+    return el;
+  }
+  function frame(el, w, h) {
+    var svg = svgEl("svg", { viewBox: "0 0 " + w + " " + h, role: "img" });
+    el.innerHTML = "";
+    el.appendChild(svg);
+    return svg;
+  }
+
+  // maxOf guards the axis scale: empty values would give -Infinity (truthy,
+  // so "|| 1" can't catch it) and a non-positive max would flip the chart.
+  function maxOf(values) {
+    var m = values.length ? Math.max.apply(null, values) : 0;
+    return m > 0 ? m : 1;
+  }
+
+  // bar(el, {labels:[], values:[], color?, format?}) — vertical bar chart.
+  function bar(el, cfg) {
+    var W = 640, H = 280, padL = 46, padB = 30, padT = 12;
+    var svg = frame(el, W, H);
+    var max = maxOf(cfg.values);
+    var n = cfg.values.length;
+    var plotW = W - padL - 12, plotH = H - padT - padB;
+    var step = plotW / n, bw = Math.min(step * 0.62, 64);
+    var color = cfg.color || accent();
+    var f = coerceFormat(cfg.format);
+    for (var g = 0; g <= 4; g++) {
+      var gy = padT + plotH - (plotH * g) / 4;
+      svg.appendChild(svgEl("line", { x1: padL, y1: gy, x2: W - 12, y2: gy, stroke: "currentColor", "stroke-opacity": 0.08 }));
+      var lbl = svgEl("text", { x: padL - 8, y: gy + 4, "text-anchor": "end", "font-size": 10, fill: mutedColor() });
+      lbl.textContent = axisFmt((max * g) / 4);
+      svg.appendChild(lbl);
+    }
+    cfg.values.forEach(function (v, i) {
+      var bh = Math.max(0, (v / max) * plotH);
+      var x = padL + i * step + (step - bw) / 2;
+      var y = padT + plotH - bh;
+      var r = svgEl("rect", { x: x, y: y, width: bw, height: bh, rx: 4, fill: color });
+      var t = svgEl("title", {});
+      t.textContent = cfg.labels[i] + ": " + f(v);
+      r.appendChild(t);
+      svg.appendChild(r);
+      var tx = svgEl("text", { x: x + bw / 2, y: H - 10, "text-anchor": "middle", "font-size": 11, fill: mutedColor() });
+      tx.textContent = cfg.labels[i];
+      svg.appendChild(tx);
+    });
+  }
+
+  // line(el, {labels:[], values:[], color?, format?}) — single-series line.
+  function line(el, cfg) {
+    var W = 640, H = 280, padL = 46, padB = 30, padT = 12;
+    var svg = frame(el, W, H);
+    var max = maxOf(cfg.values);
+    var n = cfg.values.length;
+    var plotW = W - padL - 16, plotH = H - padT - padB;
+    var color = cfg.color || accent();
+    var f = coerceFormat(cfg.format);
+    for (var g = 0; g <= 4; g++) {
+      var gy = padT + plotH - (plotH * g) / 4;
+      svg.appendChild(svgEl("line", { x1: padL, y1: gy, x2: W - 16, y2: gy, stroke: "currentColor", "stroke-opacity": 0.08 }));
+      var lbl = svgEl("text", { x: padL - 8, y: gy + 4, "text-anchor": "end", "font-size": 10, fill: mutedColor() });
+      lbl.textContent = axisFmt((max * g) / 4);
+      svg.appendChild(lbl);
+    }
+    var pts = cfg.values.map(function (v, i) {
+      var x = padL + (n === 1 ? plotW / 2 : (plotW * i) / (n - 1));
+      var y = padT + plotH - (v / max) * plotH;
+      return [x, y];
+    });
+    var d = pts.map(function (p, i) { return (i ? "L" : "M") + p[0].toFixed(1) + " " + p[1].toFixed(1); }).join(" ");
+    svg.appendChild(svgEl("path", { d: d, fill: "none", stroke: color, "stroke-width": 2, "stroke-linejoin": "round" }));
+    pts.forEach(function (p, i) {
+      var c = svgEl("circle", { cx: p[0], cy: p[1], r: 3.5, fill: color });
+      var t = svgEl("title", {});
+      t.textContent = cfg.labels[i] + ": " + f(cfg.values[i]);
+      c.appendChild(t);
+      svg.appendChild(c);
+      var tx = svgEl("text", { x: p[0], y: H - 10, "text-anchor": "middle", "font-size": 11, fill: mutedColor() });
+      tx.textContent = cfg.labels[i];
+      svg.appendChild(tx);
+    });
+  }
+
+  // donut(el, {labels:[], values:[], colors?}) — donut with center total.
+  function donut(el, cfg) {
+    var W = 320, H = 280, cx = W / 2, cy = H / 2, R = 92, r = 58;
+    var svg = frame(el, W, H);
+    var total = cfg.values.reduce(function (a, b) { return a + b; }, 0) || 1;
+    var palette = cfg.colors || [accent(), "#1baf7a", "#eda100", "#e34948", "#4a3aa7", "#e87ba4"];
+    var a0 = -Math.PI / 2;
+    cfg.values.forEach(function (v, i) {
+      var a1 = a0 + (v / total) * Math.PI * 2;
+      var large = a1 - a0 > Math.PI ? 1 : 0;
+      var p = ["M", cx + R * Math.cos(a0), cy + R * Math.sin(a0),
+        "A", R, R, 0, large, 1, cx + R * Math.cos(a1), cy + R * Math.sin(a1),
+        "L", cx + r * Math.cos(a1), cy + r * Math.sin(a1),
+        "A", r, r, 0, large, 0, cx + r * Math.cos(a0), cy + r * Math.sin(a0), "Z"].join(" ");
+      var path = svgEl("path", { d: p, fill: palette[i % palette.length] });
+      var t = svgEl("title", {});
+      t.textContent = cfg.labels[i] + ": " + fmt.num(v) + " (" + fmt.pct(v / total) + ")";
+      path.appendChild(t);
+      svg.appendChild(path);
+      a0 = a1;
+    });
+    var center = svgEl("text", { x: cx, y: cy + 5, "text-anchor": "middle", "font-size": 20, "font-weight": 650, fill: "currentColor" });
+    center.textContent = fmt.num(total);
+    svg.appendChild(center);
+  }
+
+  window.skipShell = { fmt: fmt };
+  window.skipChart = { bar: bar, line: line, donut: donut };
+})();
+
+</script>
+</body>
+</html>
